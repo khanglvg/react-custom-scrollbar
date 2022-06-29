@@ -1,0 +1,16 @@
+{
+	"singleQuote": true,
+	"trailingComma": "es5",
+	"useTabs": true,
+	"arrowParens": "always",
+	"endOfLine ": "lf",
+	"printWidth": 100,
+	"overrides": [
+		{
+			"files": ["*.ts", "*.tsx"],
+			"options": {
+				"parser": "babel-ts"
+			}
+		}
+	]
+}
