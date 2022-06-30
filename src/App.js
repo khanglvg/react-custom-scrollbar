@@ -21,14 +21,19 @@ function contentRenderer(numberOfBlock) {
 		});
 }
 
+const containerStyles = {
+	width: '1200px',
+	height: '350px',
+};
+
 function App() {
 	return (
 		<div className="App">
-			<div style={{ width: '1600px', height: '500px' }}>
+			<div style={containerStyles}>
 				<Scrollbar>{contentRenderer(50)}</Scrollbar>
 			</div>
-			<div style={{ marginTop: 50, width: '1600px', height: '500px' }}>
-				<FakeScrollbar>{contentRenderer(50)}</FakeScrollbar>
+			<div style={{ marginTop: 50, ...containerStyles }}>
+				<FakeScrollbar autoHide={false}>{contentRenderer(50)}</FakeScrollbar>
 			</div>
 		</div>
 	);
