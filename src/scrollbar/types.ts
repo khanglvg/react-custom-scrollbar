@@ -20,7 +20,7 @@ export type ScrollbarProps = {
 	children?: React.ReactNode;
 	containerStyle?: Style;
 	containerTagName?: 'div';
-	onScroll?(): void;
+	onScroll?(event: React.UIEvent<HTMLElement>): void;
 	renderContentView?: FunctionalRenderer;
 	renderVerticalThumb?: FunctionalRenderer;
 	renderVerticalTrack?: FunctionalRenderer;
@@ -60,4 +60,6 @@ export type ContentViewProps = Pick<
 	InternalScrollbarPropsWithChildren,
 	'renderContentView' | 'children'
 > &
-	Partial<ChildRendererParams>;
+	Partial<ChildRendererParams> & {
+		onScroll(event: React.UIEvent<HTMLElement>): void;
+	};

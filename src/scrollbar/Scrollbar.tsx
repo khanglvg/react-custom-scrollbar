@@ -20,16 +20,24 @@ import {
 } from './utils';
 
 function getContentView(
-	props: ScrollbarPropsWithChildren,
+	props: Omit<ScrollbarPropsWithChildren, 'onScroll'> & {
+		onScroll(event: React.UIEvent<HTMLElement>): void;
+	},
 	ref: React.Ref<HTMLElement>
 ): JSX.Element {
-	let { children, renderContentView } = props;
+	let { children, onScroll, renderContentView } = props;
 	if (!renderContentView) {
 		renderContentView = renderContentViewDefault;
 	}
 	const contentViewStyles = getContentViewStyles();
+
 	return (
-		<ContentView ref={ref} renderContentView={renderContentView} style={contentViewStyles}>
+		<ContentView
+			ref={ref}
+			onScroll={onScroll}
+			renderContentView={renderContentView}
+			style={contentViewStyles}
+		>
 			{children}
 		</ContentView>
 	);
@@ -68,6 +76,7 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 
 	constructor(props: ScrollbarProps) {
 		super(props);
+		this.handleScroll = this.handleScroll.bind(this);
 		this.scrollToBottom = this.scrollToBottom.bind(this);
 		this.scrollToTop = this.scrollToTop.bind(this);
 		this.scrollTop = this.scrollTop.bind(this);
@@ -75,6 +84,21 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 
 	private contentViewRef: HTMLElement | null = null;
 	private verticalTrackRef: HTMLElement | null = null;
+
+	handleScroll(event: React.UIEvent<HTMLElement>): void {
+		const { onScroll } = this.props;
+		if (onScroll) {
+			onScroll(event);
+		}
+		if (!this.contentViewRef) return;
+		const { scrollHeight, clientHeight, scrollTop } = this.contentViewRef;
+		console.log(`KDebug 🚩 Scrollbar - 94 ~ handleScroll -> `, clientHeight, scrollHeight, scrollTop);
+		/**
+		 TODO:
+		 1/ Update thumb height
+		 2/ Update thumb position
+		 */
+	}
 
 	scrollToTop() {}
 
@@ -93,9 +117,13 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 			renderVerticalTrack,
 			...otherProps
 		} = this.props;
-		const contentView = getContentView({ children, renderContentView, ...otherProps }, (ref) => {
-			this.contentViewRef = ref;
-		});
+
+		const contentView = getContentView(
+			{ children, renderContentView, onScroll: this.handleScroll, ...otherProps },
+			(ref) => {
+				this.contentViewRef = ref;
+			}
+		);
 
 		/**
 		 * Vertical
