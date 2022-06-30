@@ -1,41 +1,80 @@
-import React, { ForwardRefExoticComponent } from 'react';
-import ContainerElement from './Container';
-import Element from './Element';
-import { IScrollbar, ScrollbarProps, ScrollbarPropsWithChildren } from './types';
+import React from 'react';
+import { Container } from './components';
+import {
+	FunctionalRenderer,
+	InternalScrollbarProps,
+	IScrollbar,
+	ScrollbarProps,
+	ScrollbarPropsWithChildren,
+	Style,
+} from './types';
+import { ContentView, VerticalThumb, VerticalTrack } from './widgets';
+import {
+	getContainerStyles,
+	getContentViewStyles,
+	getVerticalTrackStyles,
+	getVerticalThumbStyles,
+	renderContentViewDefault,
+	renderVerticalThumbDefault,
+	renderVerticalTrackDefault,
+} from './utils';
 
-function VerticalThumbElement(): ForwardRefExoticComponent<ScrollbarProps> {
-	const Component = React.forwardRef(
-		(props: ScrollbarProps, ref: React.ForwardedRef<HTMLElement>) => {
-			const { renderVerticalThumb } = props;
-			return <Element ref={ref} renderer={renderVerticalThumb} />;
-		}
+function getContentView(
+	props: ScrollbarPropsWithChildren,
+	ref: React.Ref<HTMLElement>
+): JSX.Element {
+	let { children, renderContentView } = props;
+	if (!renderContentView) {
+		renderContentView = renderContentViewDefault;
+	}
+	const contentViewStyles = getContentViewStyles();
+	return (
+		<ContentView ref={ref} renderContentView={renderContentView} style={contentViewStyles}>
+			{children}
+		</ContentView>
 	);
-	Component.displayName = 'VerticalThumbElement';
-	return Component;
 }
 
-function VerticalTrackElement(): ForwardRefExoticComponent<ScrollbarPropsWithChildren> {
-	const Component = React.forwardRef(
-		(props: ScrollbarPropsWithChildren, ref: React.ForwardedRef<HTMLElement>) => {
-			const { children, renderVerticalTrack } = props;
-			return (
-				<Element ref={ref} childKey={'verticalTrack'} renderer={renderVerticalTrack}>
-					{children}
-				</Element>
-			);
-		}
+function getVerticalTrackElement(
+	props: {
+		renderVerticalThumb?: FunctionalRenderer;
+		renderVerticalTrack?: FunctionalRenderer;
+	},
+	ref: React.Ref<HTMLElement>
+): JSX.Element {
+	let { renderVerticalThumb, renderVerticalTrack } = props;
+
+	if (!renderVerticalTrack) {
+		renderVerticalTrack = renderVerticalTrackDefault;
+	}
+	if (!renderVerticalThumb) {
+		renderVerticalThumb = renderVerticalThumbDefault;
+	}
+
+	const verticalThumbStyles = getVerticalThumbStyles();
+	const verticalTrackStyles = getVerticalTrackStyles();
+
+	return (
+		<VerticalTrack ref={ref} renderVerticalTrack={renderVerticalTrack} style={verticalTrackStyles}>
+			<VerticalThumb renderVerticalThumb={renderVerticalThumb} style={verticalThumbStyles} />
+		</VerticalTrack>
 	);
-	Component.displayName = 'VerticalTrackElement';
-	return Component;
 }
 
 class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
+	static defaultProps: ScrollbarProps = {
+		containerTagName: 'div',
+	};
+
 	constructor(props: ScrollbarProps) {
 		super(props);
 		this.scrollToBottom = this.scrollToBottom.bind(this);
 		this.scrollToTop = this.scrollToTop.bind(this);
 		this.scrollTop = this.scrollTop.bind(this);
 	}
+
+	private contentViewRef: HTMLElement | null = null;
+	private verticalTrackRef: HTMLElement | null = null;
 
 	scrollToTop() {}
 
@@ -44,12 +83,40 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 	scrollToBottom() {}
 
 	render() {
-		const verticalTrackElement = (
-			<VerticalTrackElement {...this.props}>
-				<VerticalThumbElement {...this.props} />
-			</VerticalTrackElement>
+		const {
+			children,
+			containerStyle,
+			containerTagName,
+			onScroll,
+			renderContentView,
+			renderVerticalThumb,
+			renderVerticalTrack,
+			...otherProps
+		} = this.props;
+		const contentView = getContentView({ children, renderContentView, ...otherProps }, (ref) => {
+			this.contentViewRef = ref;
+		});
+
+		/**
+		 * Vertical
+		 */
+		const verticalTrackElement = getVerticalTrackElement(
+			{ renderVerticalThumb, renderVerticalTrack },
+			(ref) => {
+				this.verticalTrackRef = ref;
+			}
 		);
-		return <ContainerElement children={[verticalTrackElement]} {...this.props} />;
+
+		const containerStyles = {
+			...getContainerStyles(),
+			containerStyle,
+		};
+
+		return (
+			<Container {...(this.props as InternalScrollbarProps)} containerStyle={containerStyles}>
+				{[contentView, verticalTrackElement]}
+			</Container>
+		);
 	}
 }
 
