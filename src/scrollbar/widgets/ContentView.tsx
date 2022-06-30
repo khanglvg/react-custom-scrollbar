@@ -1,21 +1,16 @@
 import React from 'react';
 import { Element } from '../components';
-import { ScrollbarPropsWithChildren } from '../types';
+import { ContentViewProps } from '../types';
 
-function ContentRenderer(
-	props: ScrollbarPropsWithChildren,
-	ref: React.ForwardedRef<HTMLElement>
-) {
-	const { children, renderViewContainer } = props;
+function ContentViewRenderer(props: ContentViewProps, ref: React.ForwardedRef<HTMLElement>) {
+	const { children, renderContentView, style } = props;
 	return (
-		<Element ref={ref} childKey={'contentView'} renderer={renderViewContainer}>
+		<Element ref={ref} childKey={'contentView'} childStyle={style} renderer={renderContentView}>
 			{children}
 		</Element>
 	);
 }
 
-const Content = React.forwardRef<HTMLElement, ScrollbarPropsWithChildren>(
-	ContentRenderer
-);
-Content.displayName = 'ContentView';
-export default Content;
+const ContentView = React.forwardRef<HTMLElement, ContentViewProps>(ContentViewRenderer);
+ContentView.displayName = 'ContentView';
+export default ContentView;
