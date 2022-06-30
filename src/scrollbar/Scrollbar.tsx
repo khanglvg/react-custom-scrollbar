@@ -6,14 +6,18 @@ import {
 	IScrollbar,
 	ScrollbarProps,
 	ScrollbarPropsWithChildren,
-	Style,
 } from './types';
 import { ContentView, VerticalThumb, VerticalTrack } from './widgets';
 import {
+	caf,
+	css,
 	getContainerStyles,
 	getContentViewStyles,
+	getInnerHeight,
+	getScrollbarWidth,
 	getVerticalTrackStyles,
 	getVerticalThumbStyles,
+	raf,
 	renderContentViewDefault,
 	renderVerticalThumbDefault,
 	renderVerticalTrackDefault,
@@ -74,6 +78,10 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		containerTagName: 'div',
 	};
 
+	private contentViewRef: HTMLElement | null = null;
+	private requestId: number | null;
+	private verticalTrackRef: HTMLElement | null = null;
+
 	constructor(props: ScrollbarProps) {
 		super(props);
 		this.handleScroll = this.handleScroll.bind(this);
@@ -82,9 +90,6 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		this.scrollTop = this.scrollTop.bind(this);
 	}
 
-	private contentViewRef: HTMLElement | null = null;
-	private verticalTrackRef: HTMLElement | null = null;
-
 	handleScroll(event: React.UIEvent<HTMLElement>): void {
 		const { onScroll } = this.props;
 		if (onScroll) {
@@ -92,7 +97,15 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		}
 		if (!this.contentViewRef) return;
 		const { scrollHeight, clientHeight, scrollTop } = this.contentViewRef;
-		console.log(`KDebug 🚩 Scrollbar - 94 ~ handleScroll -> `, clientHeight, scrollHeight, scrollTop);
+		console.log(
+			`KDebug 🚩 Scrollbar - 94 ~ handleScroll -> `,
+			clientHeight,
+			scrollHeight,
+			scrollTop
+		);
+		this.update(() => {
+			console.log('kdebug update done');
+		});
 		/**
 		 TODO:
 		 1/ Update thumb height
@@ -105,6 +118,78 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 	scrollTop() {}
 
 	scrollToBottom() {}
+
+	getThumbVerticalHeight(): number {
+		const { thumbSize, thumbMinSize } = this.props;
+		const { scrollHeight, clientHeight } = this.contentViewRef as HTMLElement;
+		const trackHeight = getInnerHeight(this.verticalTrackRef as HTMLElement);
+		const height = Math.ceil((clientHeight / scrollHeight) * trackHeight);
+		if (trackHeight === height) return 0;
+		if (thumbSize) return thumbSize;
+		return Math.max(height, thumbMinSize);
+	}
+
+	getValues() {
+		const {
+			scrollLeft = 0,
+			scrollTop = 0,
+			scrollWidth = 0,
+			scrollHeight = 0,
+			clientWidth = 0,
+			clientHeight = 0,
+		} = this.contentViewRef || {};
+
+		return {
+			left: scrollLeft / (scrollWidth - clientWidth) || 0,
+			top: scrollTop / (scrollHeight - clientHeight) || 0,
+			scrollLeft,
+			scrollTop,
+			scrollWidth,
+			scrollHeight,
+			clientWidth,
+			clientHeight,
+		};
+	}
+
+	doOnNextFrame(callback: FrameRequestCallback): void {
+		if (this.requestId) {
+			caf(this.requestId);
+		}
+		this.requestId = raf(callback);
+	}
+
+	doUpdate(callback: Function): void {
+		const { onUpdate, hideTracksWhenNotNeeded } = this.props;
+		const values = this.getValues();
+		if (getScrollbarWidth()) {
+			const { clientWidth, scrollWidth } = values;
+			const { scrollTop, clientHeight, scrollHeight } = values;
+			const trackVerticalHeight = getInnerHeight(this.verticalTrackRef as HTMLElement);
+			const thumbVerticalHeight = this.getThumbVerticalHeight();
+			const thumbVerticalY =
+				(scrollTop / (scrollHeight - clientHeight)) * (trackVerticalHeight - thumbVerticalHeight);
+			const thumbVerticalStyle = {
+				height: thumbVerticalHeight,
+				transform: `translateY(${thumbVerticalY}px)`,
+			};
+			if (hideTracksWhenNotNeeded) {
+				const trackVerticalStyle = {
+					visibility: scrollHeight > clientHeight ? 'visible' : 'hidden',
+				};
+				css(this.verticalTrackRef as HTMLElement, trackVerticalStyle);
+			}
+			console.log('kdebug', thumbVerticalStyle);
+			css(this.verticalTrackRef as HTMLElement, thumbVerticalStyle);
+		}
+		if (onUpdate) onUpdate(values);
+		if (typeof callback === 'function') callback(values);
+	}
+
+	update(callback: Function) {
+		this.doOnNextFrame(() => {
+			this.doUpdate(callback);
+		});
+	}
 
 	render() {
 		const {

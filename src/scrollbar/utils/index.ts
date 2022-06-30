@@ -1,7 +1,11 @@
+export { default as css } from './css';
 export { default as getContainerStyles } from './getContainerStyles';
 export { default as getContentViewStyles } from './getContentViewStyles';
+export { default as getInnerHeight } from './getInnerHeight';
+export { default as getScrollbarWidth } from './getScrollbarWidth';
 export { default as getVerticalThumbStyles } from './getVerticalThumbStyles';
 export { default as getVerticalTrackStyles } from './getVerticalTrackStyles';
+export { raf, caf } from './raf';
 export { default as renderContentViewDefault } from './renderContentViewDefault';
 export { default as renderVerticalThumbDefault } from './renderVerticalThumbDefault';
 export { default as renderVerticalTrackDefault } from './renderVerticalTrackDefault';
