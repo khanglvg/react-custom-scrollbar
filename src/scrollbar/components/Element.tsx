@@ -1,16 +1,19 @@
 import React from 'react';
-import { ElementProps, Styles } from './types';
+import { ElementProps, Style } from '../types';
 
-function Element(props: ElementProps, ref: React.ForwardedRef<HTMLElement>): React.ReactElement {
-	const { children, childKey, childStyles, renderer } = props;
+function ElementRenderer(
+	props: ElementProps,
+	ref: React.ForwardedRef<HTMLElement>
+): React.ReactElement {
+	const { children, childKey, childStyle, renderer, ...otherProps } = props;
 	const childProps = {
-		...props,
+		...otherProps,
 		key: childKey,
 		ref,
 	};
-	return React.cloneElement(renderer({ style: childStyles as Styles }), childProps, children);
+	return React.cloneElement(renderer({ style: childStyle as Style }), childProps, children);
 }
 
-const ElementWithRef = React.forwardRef<HTMLElement, ElementProps>(Element);
-ElementWithRef.displayName = 'ChildElement';
-export default ElementWithRef;
+const Element = React.forwardRef<HTMLElement, ElementProps>(ElementRenderer);
+Element.displayName = 'Element';
+export default Element;

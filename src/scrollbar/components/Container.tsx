@@ -1,19 +1,19 @@
 import React from 'react';
-import { ContainerProps } from './types';
+import { ContainerProps } from '../types';
 
-function ContainerElement(
+function ContainerRenderer(
 	props: ContainerProps,
 	ref: React.ForwardedRef<HTMLElement>
 ): React.ReactElement {
-	const { children, containerStyles, outerTagName = 'div' } = props;
+	const { children, containerStyle, containerTagName = 'div', ...otherProps } = props;
 	const containerProps = {
-		...props,
-		style: containerStyles,
+		...otherProps,
+		style: containerStyle,
 		ref,
 	};
-	return React.createElement(outerTagName, containerProps, children);
+	return React.createElement(containerTagName, containerProps, children);
 }
 
-const Container = React.forwardRef<HTMLElement, ContainerProps>(ContainerElement);
-Container.displayName = 'ContainerElement';
+const Container = React.forwardRef<HTMLElement, ContainerProps>(ContainerRenderer);
+Container.displayName = 'Container';
 export default Container;

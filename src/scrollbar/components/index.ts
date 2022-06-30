@@ -1,2 +1,2 @@
-export { default as VerticalThumb } from './VerticalThumb';
-export { default as VerticalTrack } from './VerticalTrack';
+export { default as Container } from './Container';
+export { default as Element } from './Element';
