@@ -1,10 +1,14 @@
 import React from 'react';
 
+export type Style = { [key: string]: React.CSSProperties };
+
+export type ChildRendererParams = {
+	style: Style;
+};
+
 export type FunctionalRenderer = (params: ChildRendererParams) => React.ReactElement;
 
-export type Styles = { [key: string]: React.CSSProperties };
-
-export type Children = Array<React.ReactNode>;
+export type Children = React.ReactNode | Array<React.ReactNode>;
 
 export interface IScrollbar {
 	scrollTop(top: number): void;
@@ -13,23 +17,47 @@ export interface IScrollbar {
 }
 
 export type ScrollbarProps = {
-	containerStyles?: Styles;
-	outerTagName: 'div';
-	renderVerticalThumb: FunctionalRenderer;
-	renderVerticalTrack: FunctionalRenderer;
+	children?: React.ReactNode;
+	containerStyle?: Style;
+	containerTagName?: 'div';
+	onScroll?(): void;
+	renderContentView?: FunctionalRenderer;
+	renderVerticalThumb?: FunctionalRenderer;
+	renderVerticalTrack?: FunctionalRenderer;
 };
 
 export type ScrollbarPropsWithChildren = ScrollbarProps & { children: Children };
 
-export type ContainerProps = ScrollbarPropsWithChildren;
-
-export type ChildRendererParams = {
-	style: Styles;
+export type InternalScrollbarProps = {
+	containerStyle?: Style;
+	containerTagName: 'div';
+	renderContentView: FunctionalRenderer;
+	renderVerticalThumb: FunctionalRenderer;
+	renderVerticalTrack: FunctionalRenderer;
 };
 
+export type InternalScrollbarPropsWithChildren = InternalScrollbarProps & { children: Children };
+
+export type ContainerProps = InternalScrollbarPropsWithChildren;
+
 export type ElementProps = {
-	childStyles?: Styles;
+	childStyle?: Style;
 	childKey?: string;
 	children?: Children;
 	renderer: FunctionalRenderer;
 };
+
+export type VerticalThumbProps = Pick<InternalScrollbarPropsWithChildren, 'renderVerticalThumb'> &
+	Partial<ChildRendererParams>;
+
+export type VerticalTrackProps = Pick<
+	InternalScrollbarPropsWithChildren,
+	'renderVerticalTrack' | 'children'
+> &
+	Partial<ChildRendererParams>;
+
+export type ContentViewProps = Pick<
+	InternalScrollbarPropsWithChildren,
+	'renderContentView' | 'children'
+> &
+	Partial<ChildRendererParams>;
