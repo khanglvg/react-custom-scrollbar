@@ -4,7 +4,6 @@ let scrollbarWidth: number | undefined;
 export default function getScrollbarWidth(): number {
     if (scrollbarWidth != undefined) return scrollbarWidth;
     /* istanbul ignore else */
-    console.log(typeof document)
     if (typeof document !== 'undefined') {
         const div = document.createElement('div');
         css(div, {
@@ -16,7 +15,6 @@ export default function getScrollbarWidth(): number {
             MsOverflowStyle: 'scrollbar'
         });
         document.body.appendChild(div);
-        console.log(div.offsetWidth, div.clientWidth)
         scrollbarWidth = (div.offsetWidth - div.clientWidth);
         document.body.removeChild(div);
     } else {
