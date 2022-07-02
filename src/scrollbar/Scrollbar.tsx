@@ -52,7 +52,8 @@ function getVerticalTrackElement(
 		renderVerticalThumb?: FunctionalRenderer;
 		renderVerticalTrack?: FunctionalRenderer;
 	},
-	ref: React.Ref<HTMLElement>
+	trackRef: React.Ref<HTMLElement>,
+	thumbRef: React.Ref<HTMLElement>
 ): JSX.Element {
 	let { renderVerticalThumb, renderVerticalTrack } = props;
 
@@ -67,8 +68,16 @@ function getVerticalTrackElement(
 	const verticalTrackStyles = getVerticalTrackStyles();
 
 	return (
-		<VerticalTrack ref={ref} renderVerticalTrack={renderVerticalTrack} style={verticalTrackStyles}>
-			<VerticalThumb renderVerticalThumb={renderVerticalThumb} style={verticalThumbStyles} />
+		<VerticalTrack
+			ref={trackRef}
+			renderVerticalTrack={renderVerticalTrack}
+			style={verticalTrackStyles}
+		>
+			<VerticalThumb
+				ref={thumbRef}
+				renderVerticalThumb={renderVerticalThumb}
+				style={verticalThumbStyles}
+			/>
 		</VerticalTrack>
 	);
 }
@@ -76,10 +85,12 @@ function getVerticalTrackElement(
 class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 	static defaultProps: ScrollbarProps = {
 		containerTagName: 'div',
+		minThumbSize: 50,
 	};
 
 	private contentViewRef: HTMLElement | null = null;
-	private requestId: number | null;
+	private requestId: number | null = null;
+	private verticalThumbRef: HTMLElement | null = null;
 	private verticalTrackRef: HTMLElement | null = null;
 
 	constructor(props: ScrollbarProps) {
@@ -90,19 +101,16 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		this.scrollTop = this.scrollTop.bind(this);
 	}
 
+	componentDidMount() {
+		this.update();
+	}
+
 	handleScroll(event: React.UIEvent<HTMLElement>): void {
 		const { onScroll } = this.props;
 		if (onScroll) {
 			onScroll(event);
 		}
 		if (!this.contentViewRef) return;
-		const { scrollHeight, clientHeight, scrollTop } = this.contentViewRef;
-		console.log(
-			`KDebug 🚩 Scrollbar - 94 ~ handleScroll -> `,
-			clientHeight,
-			scrollHeight,
-			scrollTop
-		);
 		this.update(() => {
 			console.log('kdebug update done');
 		});
@@ -120,13 +128,13 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 	scrollToBottom() {}
 
 	getThumbVerticalHeight(): number {
-		const { thumbSize, thumbMinSize } = this.props;
+		const { thumbSize, minThumbSize } = this.props;
 		const { scrollHeight, clientHeight } = this.contentViewRef as HTMLElement;
 		const trackHeight = getInnerHeight(this.verticalTrackRef as HTMLElement);
 		const height = Math.ceil((clientHeight / scrollHeight) * trackHeight);
 		if (trackHeight === height) return 0;
 		if (thumbSize) return thumbSize;
-		return Math.max(height, thumbMinSize);
+		return Math.max(height, minThumbSize as number);
 	}
 
 	getValues() {
@@ -158,11 +166,10 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		this.requestId = raf(callback);
 	}
 
-	doUpdate(callback: Function): void {
+	doUpdate(callback?: Function): void {
 		const { onUpdate, hideTracksWhenNotNeeded } = this.props;
 		const values = this.getValues();
 		if (getScrollbarWidth()) {
-			const { clientWidth, scrollWidth } = values;
 			const { scrollTop, clientHeight, scrollHeight } = values;
 			const trackVerticalHeight = getInnerHeight(this.verticalTrackRef as HTMLElement);
 			const thumbVerticalHeight = this.getThumbVerticalHeight();
@@ -178,14 +185,13 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 				};
 				css(this.verticalTrackRef as HTMLElement, trackVerticalStyle);
 			}
-			console.log('kdebug', thumbVerticalStyle);
-			css(this.verticalTrackRef as HTMLElement, thumbVerticalStyle);
+			css(this.verticalThumbRef as HTMLElement, thumbVerticalStyle);
 		}
 		if (onUpdate) onUpdate(values);
 		if (typeof callback === 'function') callback(values);
 	}
 
-	update(callback: Function) {
+	update(callback?: Function) {
 		this.doOnNextFrame(() => {
 			this.doUpdate(callback);
 		});
@@ -217,6 +223,9 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 			{ renderVerticalThumb, renderVerticalTrack },
 			(ref) => {
 				this.verticalTrackRef = ref;
+			},
+			(ref) => {
+				this.verticalThumbRef = ref;
 			}
 		);
 
