@@ -82,7 +82,7 @@ function style(element: HTMLElement, property: string, value?: string) {
 
 function each(element: HTMLElement, properties: Dict<string>): void {
 	for (let k in properties) {
-		if (properties.hasOwnProperty(k)) {
+		if (Object.prototype.hasOwnProperty.call(properties, k)) {
 			style(element, k, properties[k]);
 		}
 	}
@@ -99,7 +99,11 @@ function get(element: HTMLElement, properties: Array<any> | string) {
 	}
 }
 
-function set(element: HTMLElement, properties: Dict<string>): void {
+function set(
+	element: HTMLElement,
+	properties: Dict<string | number> | string,
+	value?: string
+): void {
 	if (arguments.length === 2) {
 		if (typeof arguments[1] === 'string') {
 			arguments[0].style.cssText = arguments[1];
@@ -115,4 +119,4 @@ const css = set;
 css.prototype.get = get;
 css.prototype.set = set;
 
-export default css
+export default css;
