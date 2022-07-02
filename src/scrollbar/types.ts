@@ -16,14 +16,29 @@ export interface IScrollbar {
 	scrollToTop(): void;
 }
 
+export type ScrollValues = {
+	left: number;
+	top: number;
+	scrollLeft: number;
+	scrollTop: number;
+	scrollWidth: number;
+	scrollHeight: number;
+	clientWidth: number;
+	clientHeight: number;
+};
+
 export type ScrollbarProps = {
 	children?: React.ReactNode;
 	containerStyle?: Style;
 	containerTagName?: 'div';
+	hideTracksWhenNotNeeded?: boolean;
+	minThumbSize?: number;
 	onScroll?(event: React.UIEvent<HTMLElement>): void;
+	onUpdate?(values: ScrollValues): void;
 	renderContentView?: FunctionalRenderer;
 	renderVerticalThumb?: FunctionalRenderer;
 	renderVerticalTrack?: FunctionalRenderer;
+	thumbSize?: number;
 };
 
 export type ScrollbarPropsWithChildren = ScrollbarProps & { children: Children };
