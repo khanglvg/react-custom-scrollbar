@@ -89,7 +89,7 @@ function getVerticalTrackElement(
 class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 	static defaultProps: ScrollbarProps = {
 		containerTagName: 'div',
-		minThumbSize: 50,
+		minThumbSize: 30,
 	};
 
 	private _contentViewRef: HTMLElement | null = null;
