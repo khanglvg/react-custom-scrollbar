@@ -3,8 +3,8 @@ import { Element } from '../components';
 import { VerticalThumbProps } from '../types';
 
 function VerticalThumbRenderer(props: VerticalThumbProps, ref: React.ForwardedRef<HTMLElement>) {
-	const { renderVerticalThumb, style } = props;
-	return <Element ref={ref} childStyle={style} renderer={renderVerticalThumb} />;
+	const { renderVerticalThumb, style, ...otherProps } = props;
+	return <Element {...otherProps} ref={ref} childStyle={style} renderer={renderVerticalThumb} />;
 }
 
 const VerticalThumb = React.forwardRef<HTMLElement, VerticalThumbProps>(VerticalThumbRenderer);

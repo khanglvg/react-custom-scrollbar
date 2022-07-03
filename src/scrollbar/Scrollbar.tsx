@@ -51,11 +51,13 @@ function getVerticalTrackElement(
 	props: {
 		renderVerticalThumb?: FunctionalRenderer;
 		renderVerticalTrack?: FunctionalRenderer;
+		onThumbMouseDown?(event: React.MouseEvent<HTMLElement>): void;
+		onTrackMouseDown?(event: React.MouseEvent<HTMLElement>): void;
 	},
 	trackRef: React.Ref<HTMLElement>,
 	thumbRef: React.Ref<HTMLElement>
 ): JSX.Element {
-	let { renderVerticalThumb, renderVerticalTrack } = props;
+	let { renderVerticalThumb, renderVerticalTrack, onThumbMouseDown, onTrackMouseDown } = props;
 
 	if (!renderVerticalTrack) {
 		renderVerticalTrack = renderVerticalTrackDefault;
@@ -70,11 +72,13 @@ function getVerticalTrackElement(
 	return (
 		<VerticalTrack
 			ref={trackRef}
+			onMouseDown={onTrackMouseDown}
 			renderVerticalTrack={renderVerticalTrack}
 			style={verticalTrackStyles}
 		>
 			<VerticalThumb
 				ref={thumbRef}
+				onMouseDown={onThumbMouseDown}
 				renderVerticalThumb={renderVerticalThumb}
 				style={verticalThumbStyles}
 			/>
@@ -88,10 +92,11 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		minThumbSize: 50,
 	};
 
-	private contentViewRef: HTMLElement | null = null;
+	private _contentViewRef: HTMLElement | null = null;
+	private prevPageY: number = 0;
 	private requestId: number | null = null;
-	private verticalThumbRef: HTMLElement | null = null;
-	private verticalTrackRef: HTMLElement | null = null;
+	private _verticalThumbRef: HTMLElement | null = null;
+	private _verticalTrackRef: HTMLElement | null = null;
 
 	constructor(props: ScrollbarProps) {
 		super(props);
@@ -102,7 +107,100 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 	}
 
 	componentDidMount() {
+		this.addEventListeners();
 		this.update();
+	}
+
+	componentWillUnmount() {
+		this.removeEventListeners();
+	}
+
+	addEventListeners() {
+		window.addEventListener('resize', this.handleResize);
+	}
+
+	removeEventListeners() {
+		window.removeEventListener('resize', this.handleResize);
+	}
+
+	handleResize = () => {
+		this.update();
+	};
+
+	handleVerticalThumbMouseDown = (
+		event: React.MouseEvent<HTMLElement> & { target: HTMLElement }
+	) => {
+		event.preventDefault();
+		this.handleDragStart();
+		const { target, clientY } = event;
+		const { offsetHeight } = target;
+		const { top } = target.getBoundingClientRect();
+		this.prevPageY = offsetHeight - (clientY - top);
+	};
+
+	handleVerticalTrackMouseDown = (
+		event: React.MouseEvent<HTMLElement> & { target: HTMLElement }
+	) => {
+		event.preventDefault();
+		const { target, clientY } = event;
+		const { top: targetTop } = target.getBoundingClientRect();
+		const thumbHeight = this.getThumbVerticalHeight();
+		const offset = Math.abs(targetTop - clientY) - thumbHeight / 2;
+		this.contentViewRef.scrollTop = this.getScrollTopForOffset(offset);
+	};
+
+	handleMouseMove = (event: MouseEvent) => {
+		this.handleDrag(event);
+	};
+
+	handleMouseUp = () => {
+		this.handleDragEnd();
+	};
+
+	onContentViewScroll = (event: React.UIEvent<HTMLElement>) => {
+		if (!this.contentViewRef) return;
+		this.handleScroll(event);
+	};
+
+	/**
+	 * =============== Drag start ===============
+	 */
+	handleDragStart() {
+		this.registerDragEvent();
+	}
+
+	registerDragEvent() {
+		document.addEventListener('mousemove', this.handleMouseMove);
+		document.addEventListener('mouseup', this.handleMouseUp);
+		// Cancel user's selection while dragging
+		document.onselectstart = () => false;
+	}
+
+	/**
+	 * =============== Drag end ===============
+	 */
+	handleDragEnd() {
+		this.teardownRegisteredDragEvent();
+	}
+
+	teardownRegisteredDragEvent() {
+		document.removeEventListener('mousemove', this.handleMouseMove);
+		document.removeEventListener('mouseup', this.handleMouseUp);
+		document.onselectstart = null;
+	}
+
+	/**
+	 * =============== Dragging ===============
+	 */
+	handleDrag(event: MouseEvent): void {
+		if (this.prevPageY) {
+			const { clientY } = event;
+			const { top: trackTop } = this.verticalTrackRef.getBoundingClientRect();
+			const thumbHeight = this.getThumbVerticalHeight();
+			const clickPosition = thumbHeight - this.prevPageY;
+			const offset = -trackTop + clientY - clickPosition;
+			this.contentViewRef.scrollTop = this.getScrollTopForOffset(offset);
+		}
 	}
 
 	handleScroll(event: React.UIEvent<HTMLElement>): void {
@@ -110,15 +208,9 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		if (onScroll) {
 			onScroll(event);
 		}
-		if (!this.contentViewRef) return;
 		this.update(() => {
 			console.log('kdebug update done');
 		});
-		/**
-		 TODO:
-		 1/ Update thumb height
-		 2/ Update thumb position
-		 */
 	}
 
 	scrollToTop() {}
@@ -127,10 +219,17 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 
 	scrollToBottom() {}
 
+	getScrollTopForOffset(offset: number) {
+		const { scrollHeight, clientHeight } = this.contentViewRef;
+		const trackHeight = getInnerHeight(this.verticalTrackRef);
+		const thumbHeight = this.getThumbVerticalHeight();
+		return (offset / (trackHeight - thumbHeight)) * (scrollHeight - clientHeight);
+	}
+
 	getThumbVerticalHeight(): number {
 		const { thumbSize, minThumbSize } = this.props;
-		const { scrollHeight, clientHeight } = this.contentViewRef as HTMLElement;
-		const trackHeight = getInnerHeight(this.verticalTrackRef as HTMLElement);
+		const { scrollHeight, clientHeight } = this.contentViewRef;
+		const trackHeight = getInnerHeight(this.verticalTrackRef);
 		const height = Math.ceil((clientHeight / scrollHeight) * trackHeight);
 		if (trackHeight === height) return 0;
 		if (thumbSize) return thumbSize;
@@ -171,7 +270,7 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		const values = this.getValues();
 		if (getScrollbarWidth()) {
 			const { scrollTop, clientHeight, scrollHeight } = values;
-			const trackVerticalHeight = getInnerHeight(this.verticalTrackRef as HTMLElement);
+			const trackVerticalHeight = getInnerHeight(this.verticalTrackRef);
 			const thumbVerticalHeight = this.getThumbVerticalHeight();
 			const thumbVerticalY =
 				(scrollTop / (scrollHeight - clientHeight)) * (trackVerticalHeight - thumbVerticalHeight);
@@ -183,9 +282,9 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 				const trackVerticalStyle = {
 					visibility: scrollHeight > clientHeight ? 'visible' : 'hidden',
 				};
-				css(this.verticalTrackRef as HTMLElement, trackVerticalStyle);
+				css(this.verticalTrackRef, trackVerticalStyle);
 			}
-			css(this.verticalThumbRef as HTMLElement, thumbVerticalStyle);
+			css(this.verticalThumbRef, thumbVerticalStyle);
 		}
 		if (onUpdate) onUpdate(values);
 		if (typeof callback === 'function') callback(values);
@@ -195,6 +294,18 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		this.doOnNextFrame(() => {
 			this.doUpdate(callback);
 		});
+	}
+
+	get contentViewRef(): HTMLElement {
+		return this._contentViewRef as HTMLElement;
+	}
+
+	get verticalThumbRef(): HTMLElement {
+		return this._verticalThumbRef as HTMLElement;
+	}
+
+	get verticalTrackRef(): HTMLElement {
+		return this._verticalTrackRef as HTMLElement;
 	}
 
 	render() {
@@ -210,9 +321,9 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		} = this.props;
 
 		const contentView = getContentView(
-			{ children, renderContentView, onScroll: this.handleScroll, ...otherProps },
+			{ children, renderContentView, onScroll: this.onContentViewScroll, ...otherProps },
 			(ref) => {
-				this.contentViewRef = ref;
+				this._contentViewRef = ref;
 			}
 		);
 
@@ -220,12 +331,17 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		 * Vertical
 		 */
 		const verticalTrackElement = getVerticalTrackElement(
-			{ renderVerticalThumb, renderVerticalTrack },
-			(ref) => {
-				this.verticalTrackRef = ref;
+			{
+				renderVerticalThumb,
+				renderVerticalTrack,
+				onThumbMouseDown: this.handleVerticalThumbMouseDown,
+				onTrackMouseDown: this.handleVerticalTrackMouseDown,
 			},
 			(ref) => {
-				this.verticalThumbRef = ref;
+				this._verticalTrackRef = ref;
+			},
+			(ref) => {
+				this._verticalThumbRef = ref;
 			}
 		);
 

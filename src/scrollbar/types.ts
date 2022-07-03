@@ -63,18 +63,19 @@ export type ElementProps = {
 };
 
 export type VerticalThumbProps = Pick<InternalScrollbarPropsWithChildren, 'renderVerticalThumb'> &
-	Partial<ChildRendererParams>;
+	Partial<ChildRendererParams> &
+	React.HTMLAttributes<HTMLElement>;
 
 export type VerticalTrackProps = Pick<
 	InternalScrollbarPropsWithChildren,
 	'renderVerticalTrack' | 'children'
 > &
-	Partial<ChildRendererParams>;
+	Partial<ChildRendererParams> &
+	React.HTMLAttributes<HTMLElement>;
 
 export type ContentViewProps = Pick<
 	InternalScrollbarPropsWithChildren,
 	'renderContentView' | 'children'
 > &
-	Partial<ChildRendererParams> & {
-		onScroll(event: React.UIEvent<HTMLElement>): void;
-	};
+	Partial<ChildRendererParams> &
+	React.HTMLAttributes<HTMLElement>;
