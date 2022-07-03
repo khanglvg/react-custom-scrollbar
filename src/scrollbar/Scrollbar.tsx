@@ -131,6 +131,8 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		event: React.MouseEvent<HTMLElement> & { target: HTMLElement }
 	) => {
 		event.preventDefault();
+		// Stop bubbling to track
+		event.stopPropagation();
 		this.handleDragStart();
 		const { target, clientY } = event;
 		const { offsetHeight } = target;
