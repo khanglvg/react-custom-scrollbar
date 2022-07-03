@@ -11,8 +11,11 @@ export type FunctionalRenderer = (params: ChildRendererParams) => React.ReactEle
 export type Children = React.ReactNode | Array<React.ReactNode>;
 
 export interface IScrollbar {
-	scrollTop(top: number): void;
+	getClientHeight(): number;
+	getScrollHeight(): number;
+	getScrollTop(): number;
 	scrollToBottom(): void;
+	scrollTop(top: number): void;
 	scrollToTop(): void;
 }
 

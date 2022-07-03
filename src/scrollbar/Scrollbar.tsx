@@ -86,17 +86,11 @@ function getVerticalTrackElement(
 	);
 }
 
-class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
+class Scrollbar extends React.Component<ScrollbarProps, null> implements IScrollbar {
 	static defaultProps: ScrollbarProps = {
 		containerTagName: 'div',
 		minThumbSize: 30,
 	};
-
-	private _contentViewRef: HTMLElement | null = null;
-	private prevPageY: number = 0;
-	private requestId: number | null = null;
-	private _verticalThumbRef: HTMLElement | null = null;
-	private _verticalTrackRef: HTMLElement | null = null;
 
 	constructor(props: ScrollbarProps) {
 		super(props);
@@ -115,6 +109,45 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		this.removeEventListeners();
 	}
 
+	private _contentViewRef: HTMLElement | null = null;
+	private prevPageY: number = 0;
+	private requestId: number | null = null;
+	private _verticalThumbRef: HTMLElement | null = null;
+	private _verticalTrackRef: HTMLElement | null = null;
+
+	//region ========== Public API ==========
+	public getClientHeight(): number {
+		if (!this.contentViewRef) return 0;
+		return this.contentViewRef.clientHeight;
+	}
+
+	public getScrollHeight(): number {
+		if (!this.contentViewRef) return 0;
+		return this.contentViewRef.scrollHeight;
+	}
+
+	public getScrollTop(): number {
+		if (!this.contentViewRef) return 0;
+		return this.contentViewRef.scrollTop;
+	}
+
+	public scrollToTop(): void {
+		if (!this.contentViewRef) return;
+		this.contentViewRef.scrollTop = 0;
+	}
+
+	public scrollTop(top = 0): void {
+		if (!this.contentViewRef) return;
+		this.contentViewRef.scrollTop = top;
+	}
+
+	public scrollToBottom(): void {
+		if (!this.contentViewRef) return;
+		this.contentViewRef.scrollTop = this.contentViewRef.scrollHeight;
+	}
+	//endregion
+
+	//region ========== Event register ==========
 	addEventListeners() {
 		window.addEventListener('resize', this.handleResize);
 	}
@@ -158,15 +191,9 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 	handleMouseUp = () => {
 		this.handleDragEnd();
 	};
+	//endregion
 
-	onContentViewScroll = (event: React.UIEvent<HTMLElement>) => {
-		if (!this.contentViewRef) return;
-		this.handleScroll(event);
-	};
-
-	/**
-	 * =============== Drag start ===============
-	 */
+	//region ========== Drag start ==========
 	handleDragStart() {
 		this.registerDragEvent();
 	}
@@ -177,10 +204,9 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		// Cancel user's selection while dragging
 		document.onselectstart = () => false;
 	}
+	//endregion
 
-	/**
-	 * =============== Drag end ===============
-	 */
+	//region ========== Drag end ==========
 	handleDragEnd() {
 		this.teardownRegisteredDragEvent();
 	}
@@ -190,10 +216,9 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		document.removeEventListener('mouseup', this.handleMouseUp);
 		document.onselectstart = null;
 	}
+	//endregion
 
-	/**
-	 * =============== Dragging ===============
-	 */
+	//region ========== Dragging ==========
 	handleDrag(event: MouseEvent): void {
 		if (this.prevPageY) {
 			const { clientY } = event;
@@ -204,6 +229,13 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 			this.contentViewRef.scrollTop = this.getScrollTopForOffset(offset);
 		}
 	}
+	//endregion
+
+	//region ========== Scrolling ==========
+	onContentViewScroll = (event: React.UIEvent<HTMLElement>) => {
+		if (!this.contentViewRef) return;
+		this.handleScroll(event);
+	};
 
 	handleScroll(event: React.UIEvent<HTMLElement>): void {
 		const { onScroll } = this.props;
@@ -214,13 +246,49 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 			console.log('kdebug update done');
 		});
 	}
+	//endregion
 
-	scrollToTop() {}
+	//region ========== Update ==========
+	doOnNextFrame(callback: FrameRequestCallback): void {
+		if (this.requestId) {
+			caf(this.requestId);
+		}
+		this.requestId = raf(callback);
+	}
 
-	scrollTop() {}
+	doUpdate(callback?: Function): void {
+		const { onUpdate, hideTracksWhenNotNeeded } = this.props;
+		const values = this.getValues();
+		if (getScrollbarWidth()) {
+			const { scrollTop, clientHeight, scrollHeight } = values;
+			const trackVerticalHeight = getInnerHeight(this.verticalTrackRef);
+			const thumbVerticalHeight = this.getThumbVerticalHeight();
+			const thumbVerticalY =
+				(scrollTop / (scrollHeight - clientHeight)) * (trackVerticalHeight - thumbVerticalHeight);
+			const thumbVerticalStyle = {
+				height: thumbVerticalHeight,
+				transform: `translateY(${thumbVerticalY}px)`,
+			};
+			if (hideTracksWhenNotNeeded) {
+				const trackVerticalStyle = {
+					visibility: scrollHeight > clientHeight ? 'visible' : 'hidden',
+				};
+				css(this.verticalTrackRef, trackVerticalStyle);
+			}
+			css(this.verticalThumbRef, thumbVerticalStyle);
+		}
+		if (onUpdate) onUpdate(values);
+		if (typeof callback === 'function') callback(values);
+	}
 
-	scrollToBottom() {}
+	update(callback?: Function) {
+		this.doOnNextFrame(() => {
+			this.doUpdate(callback);
+		});
+	}
+	//endregion
 
+	//region ========== Helpers ==========
 	getScrollTopForOffset(offset: number) {
 		const { scrollHeight, clientHeight } = this.contentViewRef;
 		const trackHeight = getInnerHeight(this.verticalTrackRef);
@@ -260,44 +328,6 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 		};
 	}
 
-	doOnNextFrame(callback: FrameRequestCallback): void {
-		if (this.requestId) {
-			caf(this.requestId);
-		}
-		this.requestId = raf(callback);
-	}
-
-	doUpdate(callback?: Function): void {
-		const { onUpdate, hideTracksWhenNotNeeded } = this.props;
-		const values = this.getValues();
-		if (getScrollbarWidth()) {
-			const { scrollTop, clientHeight, scrollHeight } = values;
-			const trackVerticalHeight = getInnerHeight(this.verticalTrackRef);
-			const thumbVerticalHeight = this.getThumbVerticalHeight();
-			const thumbVerticalY =
-				(scrollTop / (scrollHeight - clientHeight)) * (trackVerticalHeight - thumbVerticalHeight);
-			const thumbVerticalStyle = {
-				height: thumbVerticalHeight,
-				transform: `translateY(${thumbVerticalY}px)`,
-			};
-			if (hideTracksWhenNotNeeded) {
-				const trackVerticalStyle = {
-					visibility: scrollHeight > clientHeight ? 'visible' : 'hidden',
-				};
-				css(this.verticalTrackRef, trackVerticalStyle);
-			}
-			css(this.verticalThumbRef, thumbVerticalStyle);
-		}
-		if (onUpdate) onUpdate(values);
-		if (typeof callback === 'function') callback(values);
-	}
-
-	update(callback?: Function) {
-		this.doOnNextFrame(() => {
-			this.doUpdate(callback);
-		});
-	}
-
 	get contentViewRef(): HTMLElement {
 		return this._contentViewRef as HTMLElement;
 	}
@@ -309,6 +339,7 @@ class Scrollbar extends React.Component<ScrollbarProps> implements IScrollbar {
 	get verticalTrackRef(): HTMLElement {
 		return this._verticalTrackRef as HTMLElement;
 	}
+	//endregion
 
 	render() {
 		const {
